@@ -1,0 +1,30 @@
+try
+{
+    "Logging in to Azure..."
+    Connect-AzAccount -Identity
+}
+catch {
+    Write-Error -Message $_.Exception
+    throw $_.Exception
+}
+
+# Get all Azure VMs in the subscription
+$subscriptionId = "XXXXX-XXXXX-XXXXXX-XXX"
+
+# Select the target subscription
+Set-AzContext -SubscriptionId $subscriptionId
+
+$vms = Get-AzVM -Status | Where-Object {$_.PowerState -eq "VM running"}
+
+Foreach ($vm in $vms)   {
+    $vmName = $vm.Name
+
+    $vmstatus = Get-AzVM -Name $vm.Name -ResourceGroup $vm.ResourceGroupName -status
+    If ($vmstatus.VMAgent.Statuses.DisplayStatus -eq "Not Ready"){
+        Echo "Restarting '$vmName'"
+        Restart-AzVM -ResourceGroupName $vm.ResourceGroupName -Name $vm.Name -Verbose
+    }
+    else {
+        Echo "Agent is reachable on '$vmName'"        
+    }
+}
